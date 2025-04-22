@@ -1,3 +1,5 @@
+[![Tests](https://github.com/qba73/stamp/actions/workflows/go.yml/badge.svg)](https://github.com/qba73/stamp/actions/workflows/go.yml)
+
 # Stamp
 
 ![Stamp logo](stamp.png)
