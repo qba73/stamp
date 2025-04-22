@@ -2,70 +2,42 @@
 package stamp
 
 import (
-	"crypto/rand"
-	"crypto/rsa"
-	"crypto/x509"
-	"crypto/x509/pkix"
-	"encoding/pem"
-	"math/big"
-	"net"
-	"os"
-	"time"
+	"crypto/sha256"
+	"encoding/base64"
+
+	"github.com/opencontainers/go-digest"
+	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
-func GenerateCertAndKey() error {
-	max := new(big.Int).Lsh(big.NewInt(1), 128)
-	serialNo, err := rand.Int(rand.Reader, max)
+// CalculateDigest takes a slice of bytes and returns Digest value.
+// The content arg represents JSON doc. Digest is calculated using SHA256 algorithm.
+func CalculateDigest(content []byte) (digest.Digest, error) {
+	h := sha256.New()
+	_, err := h.Write(content)
 	if err != nil {
-		return err
+		return "", err
 	}
-	subject := pkix.Name{
-		Organization:       []string{"TestOrg Co."},
-		OrganizationalUnit: []string{"Cyber"},
-		CommonName:         "Stamp CLI",
-	}
-
-	template := x509.Certificate{
-		SerialNumber: serialNo,
-		Subject:      subject,
-		NotBefore:    time.Now(),
-		NotAfter:     time.Now().Add(365 * 24 * time.Hour),
-		KeyUsage:     x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
-		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
-		IPAddresses:  []net.IP{net.ParseIP("127.0.0.1")},
-	}
-
-	pk, err := rsa.GenerateKey(rand.Reader, 2048)
-	if err != nil {
-		return err
-	}
-
-	derBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, &pk.PublicKey, pk)
-	if err != nil {
-		return err
-	}
-
-	// Create cert
-	certOut, err := os.Create("cert.pem")
-	if err != nil {
-		return err
-	}
-	if err := pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: derBytes}); err != nil {
-		return err
-	}
-
-	// Create key
-	keyOut, err := os.Create("key.pem")
-	if err != nil {
-		return err
-	}
-	if err := pem.Encode(keyOut, &pem.Block{Type: "RSA_PRIVATE_KEY", Bytes: x509.MarshalPKCS1PrivateKey(pk)}); err != nil {
-		return err
-	}
-
-	return nil
+	return digest.NewDigestFromBytes(digest.SHA256, h.Sum(nil)), nil
 }
 
+// NewDescriptor takes a slice of bytes representing JSON doc to sign
+// and returns Descriptor value.
+func NewDescriptor(content []byte) (v1.Descriptor, error) {
+	dg, err := CalculateDigest(content)
+	if err != nil {
+		return v1.Descriptor{}, err
+	}
+	d := v1.Descriptor{
+		MediaType:    "application/json",
+		Digest:       dg,
+		Size:         int64(len(content)),
+		Data:         []byte(base64.StdEncoding.EncodeToString(content)),
+		ArtifactType: "application/json",
+	}
+	return d, nil
+}
+
+// Main is the entry point to the `stamp` cli.
 func Main() int {
 	return 0
 }
