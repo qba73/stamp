@@ -1,4 +1,6 @@
 [![Tests](https://github.com/qba73/stamp/actions/workflows/go.yml/badge.svg)](https://github.com/qba73/stamp/actions/workflows/go.yml)
+[![Security audit](https://github.com/qba73/stamp/actions/workflows/audit.yml/badge.svg)](https://github.com/qba73/stamp/actions/workflows/audit.yml)
+
 
 # Stamp
 
